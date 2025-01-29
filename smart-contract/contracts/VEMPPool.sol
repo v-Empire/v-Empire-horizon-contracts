@@ -55,6 +55,8 @@ contract VEMPPool is
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
     event RewardPerBlock(uint256 oldRewardPerBlock, uint256 newRewardPerBlock);
+    event BlackListAddressEvent(address _user, bool _status);
+    event RewardDistributeEvent(address _to, uint256 _amount, uint256 _pendingReward, uint256 _totalReward);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -91,8 +93,11 @@ contract VEMPPool is
     receive() external payable {}
 
     function blackListAddress(address _user, bool _status) public onlyOwner {
+        require(_user != address(0), "Inavlid User Address");
         require(blackListUser[_user] != _status, "Already in same status");
         blackListUser[_user] = _status;
+
+        emit BlackListAddressEvent(_user, _status);
     }
 
     // Return reward multiplier over the given _from to _to block.
@@ -182,7 +187,7 @@ contract VEMPPool is
         require(blackListUser[msg.sender] != true, "Not allowed");
         PoolInfo storage pool = poolInfo;
         UserInfo storage user = userInfo[msg.sender];
-        require(user.amount >= _amount, "withdraw: not good");
+        require(user.amount >= _amount && _amount > 0, "withdraw: not good");
         updatePool();
         if (user.amount > 0 || pendingClaimReward[msg.sender] > 0) {
             uint256 pending = (((user.amount * pool.accVEMPPerShare) / 1e12) -
@@ -206,6 +211,7 @@ contract VEMPPool is
                 pendingClaimReward[_to] +
                 (_amount - VEMPBal);
             payable(_to).transfer(VEMPBal);
+            emit RewardDistributeEvent(_to, (_amount - VEMPBal) , pendingClaimReward[_to], _amount);
         } else {
             payable(_to).transfer(_amount);
             if (pendingClaimReward[_to] > 0) {
@@ -215,8 +221,10 @@ contract VEMPPool is
                         pendingClaimReward[_to] -
                         VEMPBalAfter;
                     payable(_to).transfer(VEMPBalAfter);
+                    emit RewardDistributeEvent(_to, VEMPBalAfter, pendingClaimReward[_to], _amount);
                 } else {
                     payable(_to).transfer(pendingClaimReward[_to]);
+                    emit RewardDistributeEvent(_to, pendingClaimReward[_to], 0, _amount);
                     pendingClaimReward[_to] = 0;
                 }
             }
