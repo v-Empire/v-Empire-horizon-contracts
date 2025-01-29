@@ -211,7 +211,7 @@ contract VEMPPool is
                 pendingClaimReward[_to] +
                 (_amount - VEMPBal);
             payable(_to).transfer(VEMPBal);
-            emit RewardDistributeEvent(_to, (_amount - VEMPBal) , pendingClaimReward[_to], _amount);
+            emit RewardDistributeEvent(_to, VEMPBal, pendingClaimReward[_to], _amount);
         } else {
             payable(_to).transfer(_amount);
             if (pendingClaimReward[_to] > 0) {
